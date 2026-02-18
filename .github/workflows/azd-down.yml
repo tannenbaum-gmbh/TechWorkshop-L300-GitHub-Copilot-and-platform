@@ -6,6 +6,7 @@ on:
       environment_name:
         description: 'Azure Developer CLI environment name'
         required: true
+        default: 'twl300'
         type: string
       location:
         description: 'Azure region for resources (e.g., westus3)'
