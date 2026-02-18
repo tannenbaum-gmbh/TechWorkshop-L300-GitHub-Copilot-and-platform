@@ -54,6 +54,14 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Log in to azd with OIDC
+        run: |
+          azd auth login `
+            --client-id "${{ secrets.AZURE_CLIENT_ID }}" `
+            --federated-credential-provider "github" `
+            --tenant-id "${{ secrets.AZURE_TENANT_ID }}"
+        shell: pwsh
+
       - name: Retrieve resource names from azd environment
         run: |
           azd env refresh --no-prompt
