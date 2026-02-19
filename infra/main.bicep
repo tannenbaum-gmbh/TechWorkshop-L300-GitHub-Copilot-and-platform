@@ -57,6 +57,7 @@ module appService 'modules/appService.bicep' = {
     imageName: 'web:latest'
     aiFoundryEndpoint: aiFoundry.outputs.inferenceEndpoint
     aiServicesId: aiFoundry.outputs.id
+    contentSafetyEndpoint: aiFoundry.outputs.endpoint
   }
 }
 
@@ -66,6 +67,18 @@ module aiFoundry 'modules/aiFoundry.bicep' = {
   scope: rg
   params: {
     name: 'ai-${environmentName}-${resourceToken}'
+    location: location
+    tags: tags
+    logAnalyticsWorkspaceId: appInsights.outputs.logAnalyticsWorkspaceId
+  }
+}
+
+// Deploy Azure Monitor Workbook
+module workbook 'modules/workbook.bicep' = {
+  name: 'workbook-deployment'
+  scope: rg
+  params: {
+    name: 'workbook-${environmentName}-${resourceToken}'
     location: location
     tags: tags
     logAnalyticsWorkspaceId: appInsights.outputs.logAnalyticsWorkspaceId

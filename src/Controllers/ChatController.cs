@@ -6,11 +6,13 @@ namespace ZavaStorefront.Controllers;
 public class ChatController : Controller
 {
     private readonly ChatService _chatService;
+    private readonly ContentSafetyService _contentSafetyService;
     private readonly ILogger<ChatController> _logger;
 
-    public ChatController(ChatService chatService, ILogger<ChatController> logger)
+    public ChatController(ChatService chatService, ContentSafetyService contentSafetyService, ILogger<ChatController> logger)
     {
         _chatService = chatService;
+        _contentSafetyService = contentSafetyService;
         _logger = logger;
     }
 
@@ -32,6 +34,13 @@ public class ChatController : Controller
             request.Message[..Math.Min(50, request.Message.Length)]
                 .Replace("\r", string.Empty)
                 .Replace("\n", string.Empty));
+
+        // Content Safety check
+        var (isSafe, safetyMessage) = await _contentSafetyService.EvaluateAsync(request.Message);
+        if (!isSafe)
+        {
+            return Json(new { response = safetyMessage });
+        }
 
         var response = await _chatService.GetChatResponseAsync(request.Message);
 
