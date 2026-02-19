@@ -7,6 +7,9 @@ param location string
 @description('Tags to apply to the Azure AI Services resource')
 param tags object = {}
 
+@description('Resource ID of the Log Analytics workspace for diagnostic settings')
+param logAnalyticsWorkspaceId string
+
 // Azure AI Services (AI Foundry)
 resource aiServices 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   name: name
@@ -58,6 +61,31 @@ resource phi4Deployment 'Microsoft.CognitiveServices/accounts/deployments@2024-0
   dependsOn: [
     gpt41Deployment
   ]
+}
+
+// Diagnostic Settings – send all log and metric categories to Log Analytics
+resource diagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: '${aiServices.name}-diagnostics'
+  scope: aiServices
+  properties: {
+    workspaceId: logAnalyticsWorkspaceId
+    logs: [
+      {
+        categoryGroup: 'allLogs'
+        enabled: true
+      }
+      {
+        categoryGroup: 'audit'
+        enabled: true
+      }
+    ]
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+      }
+    ]
+  }
 }
 
 @description('Endpoint URL for the Azure AI Services resource (standard Cognitive Services)')

@@ -40,3 +40,6 @@ output instrumentationKey string = applicationInsights.properties.Instrumentatio
 
 @description('Resource ID of the Application Insights resource')
 output id string = applicationInsights.id
+
+@description('Resource ID of the Log Analytics workspace')
+output logAnalyticsWorkspaceId string = logAnalyticsWorkspace.id
