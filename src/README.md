@@ -16,6 +16,7 @@ A simple e-commerce storefront application built with .NET 10 and ASP.NET Core M
 - .NET 10
 - ASP.NET Core MVC
 - Azure.AI.Inference SDK (Phi-4 Mini Instruct)
+- Azure.Identity (DefaultAzureCredential / Managed Identity)
 - Bootstrap 5
 - Bootstrap Icons
 - Session-based state management (no database)
@@ -128,80 +129,84 @@ Logs are written to console during development.
 
 The `/Chat` page connects to an Azure AI Foundry **Phi-4 Mini Instruct** model deployment. Users can send messages and receive AI-generated responses in real time.
 
+### Authentication
+
+The chat service uses **Managed Identity (MSI)** by default — no API keys are stored or transmitted. The Bicep infrastructure assigns the **Cognitive Services User** role to the App Service's system-assigned managed identity on the AI Foundry resource.
+
+For local development, `DefaultAzureCredential` from the `Azure.Identity` SDK is used, which automatically picks up your `az login` session. An optional API key fallback is available if needed.
+
 ### Configuration
 
-The chat feature requires three settings under the `AzureAIFoundry` section:
+The chat feature uses the `AzureAIFoundry` section in configuration:
 
-| Setting     | Description                                   | Default                |
-|-------------|-----------------------------------------------|------------------------|
-| `Endpoint`  | Azure AI Services endpoint URL                | *(empty — required)*   |
-| `ApiKey`    | API key for the Azure AI Services resource    | *(empty — required)*   |
-| `ModelName` | Deployed model name                           | `Phi-4-mini-instruct`  |
+| Setting     | Description                                   | Default                | Required |
+|-------------|-----------------------------------------------|------------------------|----------|
+| `Endpoint`  | Azure AI Foundry inference endpoint URL       | *(empty)*              | Yes      |
+| `ApiKey`    | API key (optional, for local dev fallback)    | *(empty)*              | No       |
+| `ModelName` | Deployed model name                           | `Phi-4-mini-instruct`  | No       |
 
-These can be provided via `appsettings.json`, `appsettings.Development.json`, or **environment variables** (using `__` as the section separator).
+> **Note:** When `ApiKey` is empty, the service authenticates via `DefaultAzureCredential` (MSI in Azure, `az login` locally). When `ApiKey` is set, it is used instead.
+
+Settings can be provided via `appsettings.json`, `appsettings.Development.json`, environment variables (using `__` as the section separator), or user secrets.
 
 ### Local Development Setup
 
-#### Option A — Retrieve values automatically with `azd`
+#### Option A — Use the setup script (recommended)
 
-If infrastructure has already been provisioned with `azd provision`:
+The `scripts/run-local.sh` script automatically retrieves the endpoint from `azd` and starts the app using `DefaultAzureCredential` (your `az login` session):
+
+```bash
+# Ensure you are logged in
+az login
+
+# Run the script (defaults to azd env "twl300")
+bash scripts/run-local.sh
+
+# Or specify a different azd environment
+bash scripts/run-local.sh my-env-name
+```
+
+#### Option B — Set environment variables manually
 
 ```bash
 # Refresh environment values from deployed infrastructure
 azd env refresh
 
-# Read values
+# Read the endpoint
 ENDPOINT=$(azd env get-values --output json | jq -r '.AZURE_AI_FOUNDRY_ENDPOINT')
-AI_NAME=$(azd env get-values --output json | jq -r '.AZURE_AI_FOUNDRY_NAME')
-RG=$(azd env get-values --output json | jq -r '.AZURE_RESOURCE_GROUP')
 
-# Retrieve the API key
-API_KEY=$(az cognitiveservices account keys list \
-  --name "$AI_NAME" \
-  --resource-group "$RG" \
-  --query "key1" -o tsv)
-
-echo "Endpoint : $ENDPOINT"
-echo "API Key  : $API_KEY"
+# Start the app — DefaultAzureCredential picks up your az login session
+export AzureAIFoundry__Endpoint="$ENDPOINT"
+export AzureAIFoundry__ModelName="Phi-4-mini-instruct"
+cd src && dotnet run
 ```
 
-Then either:
+#### Option C — Edit `appsettings.Development.json` (git-ignored)
 
-1. **Set environment variables** (recommended, avoids committing secrets):
-   ```bash
-   export AzureAIFoundry__Endpoint="$ENDPOINT"
-   export AzureAIFoundry__ApiKey="$API_KEY"
-   export AzureAIFoundry__ModelName="Phi-4-mini-instruct"
-   dotnet run
-   ```
+```json
+{
+  "AzureAIFoundry": {
+    "Endpoint": "https://<your-ai-name>.services.ai.azure.com/",
+    "ModelName": "Phi-4-mini-instruct"
+  }
+}
+```
 
-2. **Edit `appsettings.Development.json`** (git-ignored):
-   ```json
-   {
-     "AzureAIFoundry": {
-       "Endpoint": "<your-endpoint>",
-       "ApiKey": "<your-api-key>",
-       "ModelName": "Phi-4-mini-instruct"
-     }
-   }
-   ```
-
-#### Option B — User Secrets (best practice for local secrets)
+#### Option D — User Secrets
 
 ```bash
 cd src
-dotnet user-secrets init
-dotnet user-secrets set "AzureAIFoundry:Endpoint" "<your-endpoint>"
-dotnet user-secrets set "AzureAIFoundry:ApiKey" "<your-api-key>"
+dotnet user-secrets set "AzureAIFoundry:Endpoint" "https://<your-ai-name>.services.ai.azure.com/"
 dotnet user-secrets set "AzureAIFoundry:ModelName" "Phi-4-mini-instruct"
 ```
 
+> **Tip:** If your subscription has local key auth disabled, ensure your user account has the **Cognitive Services User** role on the AI Services resource, then just `az login` and set the endpoint.
+
 ### Azure Deployment
 
-When deployed via the **Build and Deploy App** GitHub Actions workflow (`.github/workflows/deploy-app.yml`), the AI Foundry environment variables are automatically configured:
+When deployed via the **Build and Deploy App** GitHub Actions workflow (`.github/workflows/deploy-app.yml`), the AI Foundry configuration is handled automatically:
 
-1. The workflow retrieves `AZURE_AI_FOUNDRY_ENDPOINT` and `AZURE_AI_FOUNDRY_NAME` from `azd env get-values`.
-2. It fetches the API key using `az cognitiveservices account keys list`.
-3. It sets the App Service app settings (`AzureAIFoundry__Endpoint`, `AzureAIFoundry__ApiKey`, `AzureAIFoundry__ModelName`) via `az webapp config appsettings set`.
+1. **Infrastructure (`azd provision`):** The Bicep templates assign the **Cognitive Services User** role to the App Service's managed identity and set `AzureAIFoundry__Endpoint` and `AzureAIFoundry__ModelName` as app settings.
+2. **CI/CD workflow:** After deploying the container image, the workflow retrieves `AZURE_AI_FOUNDRY_ENDPOINT` from `azd env get-values` and ensures the app settings are up to date on the App Service.
 
-The Bicep infrastructure (`infra/modules/appService.bicep`) also sets these app settings during `azd provision`, so they are available immediately after provisioning.
+No API keys are used in production — the App Service authenticates to AI Foundry via its system-assigned managed identity.

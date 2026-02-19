@@ -1,5 +1,7 @@
 using Azure;
 using Azure.AI.Inference;
+using Azure.Core;
+using Azure.Identity;
 
 namespace ZavaStorefront.Services
 {
@@ -7,6 +9,7 @@ namespace ZavaStorefront.Services
     {
         private readonly ChatCompletionsClient _client;
         private readonly string _modelName;
+        private readonly string _endpoint;
         private readonly ILogger<ChatService> _logger;
         private readonly bool _isConfigured;
 
@@ -15,19 +18,22 @@ namespace ZavaStorefront.Services
             _logger = logger;
 
             var endpoint = configuration["AzureAIFoundry:Endpoint"];
-            var apiKey = configuration["AzureAIFoundry:ApiKey"];
             _modelName = configuration["AzureAIFoundry:ModelName"] ?? "Phi-4-mini-instruct";
+            _endpoint = endpoint ?? string.Empty;
 
-            if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
+            if (!string.IsNullOrWhiteSpace(endpoint))
             {
+                // Azure.AI.Inference does not automatically scope tokens to the Cognitive Services
+                // audience for *.services.ai.azure.com endpoints, so we wrap the credential.
+                _logger.LogInformation("ChatService: using DefaultAzureCredential for endpoint {Endpoint}", endpoint);
                 _client = new ChatCompletionsClient(
                     new Uri(endpoint),
-                    new AzureKeyCredential(apiKey));
+                    new CognitiveServicesCredential(new DefaultAzureCredential()));
                 _isConfigured = true;
             }
             else
             {
-                _logger.LogWarning("AzureAIFoundry endpoint or API key is not configured. Chat feature will be unavailable.");
+                _logger.LogWarning("AzureAIFoundry endpoint is not configured. Chat feature will be unavailable.");
                 _client = null!;
                 _isConfigured = false;
             }
@@ -37,7 +43,7 @@ namespace ZavaStorefront.Services
         {
             if (!_isConfigured)
             {
-                return "Chat service is not configured. Please set the AzureAIFoundry Endpoint and ApiKey in appsettings.json or environment variables.";
+                return "Chat service is not configured. Please set the AzureAIFoundry Endpoint in appsettings.json or environment variables.";
             }
 
             try
@@ -58,8 +64,9 @@ namespace ZavaStorefront.Services
             }
             catch (RequestFailedException ex)
             {
-                _logger.LogError(ex, "Request to Azure AI Foundry endpoint failed.");
-                return "Error: Unable to get a response from the chat service at this time.";
+                _logger.LogError(ex, "Request to Azure AI Foundry endpoint failed. Status: {Status}, ErrorCode: {ErrorCode}, Endpoint: {Endpoint}",
+                    ex.Status, ex.ErrorCode, _endpoint);
+                return $"Error: Unable to get a response from the chat service at this time. (Status: {ex.Status}, Code: {ex.ErrorCode})";
             }
             catch (OperationCanceledException ex)
             {
@@ -67,5 +74,23 @@ namespace ZavaStorefront.Services
                 return "Error: The request to the chat service was canceled or timed out. Please try again.";
             }
         }
+    }
+
+    /// <summary>
+    /// Forces the Cognitive Services token audience (https://cognitiveservices.azure.com)
+    /// which Azure.AI.Inference does not set automatically for *.services.ai.azure.com endpoints.
+    /// </summary>
+    internal sealed class CognitiveServicesCredential : TokenCredential
+    {
+        private static readonly string[] Scopes = ["https://cognitiveservices.azure.com/.default"];
+        private readonly TokenCredential _inner;
+
+        public CognitiveServicesCredential(TokenCredential inner) => _inner = inner;
+
+        public override AccessToken GetToken(TokenRequestContext _, CancellationToken ct) =>
+            _inner.GetToken(new TokenRequestContext(Scopes), ct);
+
+        public override ValueTask<AccessToken> GetTokenAsync(TokenRequestContext _, CancellationToken ct) =>
+            _inner.GetTokenAsync(new TokenRequestContext(Scopes), ct);
     }
 }
