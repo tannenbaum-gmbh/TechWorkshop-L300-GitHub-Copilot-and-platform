@@ -73,6 +73,18 @@ module aiFoundry 'modules/aiFoundry.bicep' = {
   }
 }
 
+// Deploy Azure Monitor Workbook
+module workbook 'modules/workbook.bicep' = {
+  name: 'workbook-deployment'
+  scope: rg
+  params: {
+    name: 'workbook-${environmentName}-${resourceToken}'
+    location: location
+    tags: tags
+    logAnalyticsWorkspaceId: appInsights.outputs.logAnalyticsWorkspaceId
+  }
+}
+
 // Outputs required by AZD
 output APPLICATIONINSIGHTS_CONNECTION_STRING string = appInsights.outputs.connectionString
 output AZURE_CONTAINER_REGISTRY_ENDPOINT string = acr.outputs.loginServer
