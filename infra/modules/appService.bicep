@@ -22,6 +22,9 @@ param imageName string = 'zava-storefront:latest'
 @description('Azure AI Foundry endpoint URL')
 param aiFoundryEndpoint string = ''
 
+@description('Azure AI Services resource ID for Cognitive Services User role assignment')
+param aiServicesId string = ''
+
 // App Service Plan
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
   name: 'plan-${name}'
@@ -86,6 +89,22 @@ resource webApp 'Microsoft.Web/sites@2022-09-01' = {
 // Reference the existing ACR for role assignment
 resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' existing = {
   name: last(split(containerRegistryId, '/'))
+}
+
+// Role assignment: Grant "Cognitive Services User" to the Web App managed identity
+// This allows the app to make inference calls against Azure AI Services.
+resource aiServicesResource 'Microsoft.CognitiveServices/accounts@2023-05-01' existing = if (!empty(aiServicesId)) {
+  name: last(split(aiServicesId, '/'))
+}
+
+resource cognitiveServicesUserRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(aiServicesId)) {
+  name: guid(aiServicesId, webApp.id, 'CognitiveServicesUser')
+  scope: aiServicesResource
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '2dc56799-7e8d-46ac-b01e-a3ae1569d8bb')
+    principalId: webApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
 }
 
 // Role assignment: Grant AcrPull to Web App's managed identity
