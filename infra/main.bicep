@@ -55,7 +55,7 @@ module appService 'modules/appService.bicep' = {
     containerRegistryId: acr.outputs.id
     appInsightsConnectionString: appInsights.outputs.connectionString
     imageName: 'web:latest'
-    aiFoundryEndpoint: aiFoundry.outputs.endpoint
+    aiFoundryEndpoint: aiFoundry.outputs.inferenceEndpoint
     aiFoundryApiKey: aiFoundry.outputs.apiKey
   }
 }
@@ -77,5 +77,5 @@ output AZURE_CONTAINER_REGISTRY_ENDPOINT string = acr.outputs.loginServer
 output SERVICE_WEB_IMAGE_NAME string = appService.outputs.name
 output AZURE_LOCATION string = location
 output AZURE_RESOURCE_GROUP string = rg.name
-output AZURE_AI_FOUNDRY_ENDPOINT string = aiFoundry.outputs.endpoint
+output AZURE_AI_FOUNDRY_ENDPOINT string = aiFoundry.outputs.inferenceEndpoint
 output AZURE_AI_FOUNDRY_NAME string = aiFoundry.outputs.name

@@ -92,20 +92,3 @@ jobs:
         with:
           app-name: ${{ env.APP_NAME }}
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-
-      - name: Configure AI Foundry environment variables on App Service
-        if: env.AI_ENDPOINT != '' && env.AI_ENDPOINT != 'null'
-        run: |
-          # Retrieve the API key from the AI Services resource
-          AI_KEY=$(az cognitiveservices account keys list \
-            --name "${{ env.AI_NAME }}" \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --query "key1" -o tsv)
-
-          az webapp config appsettings set \
-            --name "${{ env.APP_NAME }}" \
-            --resource-group "${{ env.RESOURCE_GROUP }}" \
-            --settings \
-              AzureAIFoundry__Endpoint="${{ env.AI_ENDPOINT }}" \
-              AzureAIFoundry__ApiKey="$AI_KEY" \
-              AzureAIFoundry__ModelName="Phi-4-mini-instruct"

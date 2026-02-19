@@ -7,6 +7,7 @@ namespace ZavaStorefront.Services
     {
         private readonly ChatCompletionsClient _client;
         private readonly string _modelName;
+        private readonly string _endpoint;
         private readonly ILogger<ChatService> _logger;
         private readonly bool _isConfigured;
 
@@ -17,6 +18,7 @@ namespace ZavaStorefront.Services
             var endpoint = configuration["AzureAIFoundry:Endpoint"];
             var apiKey = configuration["AzureAIFoundry:ApiKey"];
             _modelName = configuration["AzureAIFoundry:ModelName"] ?? "Phi-4-mini-instruct";
+            _endpoint = endpoint ?? string.Empty;
 
             if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
             {
@@ -58,8 +60,9 @@ namespace ZavaStorefront.Services
             }
             catch (RequestFailedException ex)
             {
-                _logger.LogError(ex, "Request to Azure AI Foundry endpoint failed.");
-                return "Error: Unable to get a response from the chat service at this time.";
+                _logger.LogError(ex, "Request to Azure AI Foundry endpoint failed. Status: {Status}, ErrorCode: {ErrorCode}, Endpoint: {Endpoint}",
+                    ex.Status, ex.ErrorCode, _endpoint);
+                return $"Error: Unable to get a response from the chat service at this time. (Status: {ex.Status}, Code: {ex.ErrorCode})";
             }
             catch (OperationCanceledException ex)
             {
