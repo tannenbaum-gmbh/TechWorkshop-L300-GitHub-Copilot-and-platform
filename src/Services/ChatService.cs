@@ -1,5 +1,6 @@
 using Azure;
 using Azure.AI.Inference;
+using Azure.Core;
 using Azure.Identity;
 
 namespace ZavaStorefront.Services
@@ -17,28 +18,17 @@ namespace ZavaStorefront.Services
             _logger = logger;
 
             var endpoint = configuration["AzureAIFoundry:Endpoint"];
-            var apiKey = configuration["AzureAIFoundry:ApiKey"];
             _modelName = configuration["AzureAIFoundry:ModelName"] ?? "Phi-4-mini-instruct";
             _endpoint = endpoint ?? string.Empty;
 
             if (!string.IsNullOrWhiteSpace(endpoint))
             {
-                if (!string.IsNullOrWhiteSpace(apiKey))
-                {
-                    // API key auth (local dev fallback)
-                    _logger.LogInformation("ChatService: using API key authentication for endpoint {Endpoint}", endpoint);
-                    _client = new ChatCompletionsClient(
-                        new Uri(endpoint),
-                        new AzureKeyCredential(apiKey));
-                }
-                else
-                {
-                    // Managed Identity / DefaultAzureCredential (production)
-                    _logger.LogInformation("ChatService: using DefaultAzureCredential for endpoint {Endpoint}", endpoint);
-                    _client = new ChatCompletionsClient(
-                        new Uri(endpoint),
-                        new DefaultAzureCredential());
-                }
+                // Azure.AI.Inference does not automatically scope tokens to the Cognitive Services
+                // audience for *.services.ai.azure.com endpoints, so we wrap the credential.
+                _logger.LogInformation("ChatService: using DefaultAzureCredential for endpoint {Endpoint}", endpoint);
+                _client = new ChatCompletionsClient(
+                    new Uri(endpoint),
+                    new CognitiveServicesCredential(new DefaultAzureCredential()));
                 _isConfigured = true;
             }
             else
@@ -53,7 +43,7 @@ namespace ZavaStorefront.Services
         {
             if (!_isConfigured)
             {
-                return "Chat service is not configured. Please set the AzureAIFoundry Endpoint and ApiKey in appsettings.json or environment variables.";
+                return "Chat service is not configured. Please set the AzureAIFoundry Endpoint in appsettings.json or environment variables.";
             }
 
             try
@@ -84,5 +74,23 @@ namespace ZavaStorefront.Services
                 return "Error: The request to the chat service was canceled or timed out. Please try again.";
             }
         }
+    }
+
+    /// <summary>
+    /// Forces the Cognitive Services token audience (https://cognitiveservices.azure.com)
+    /// which Azure.AI.Inference does not set automatically for *.services.ai.azure.com endpoints.
+    /// </summary>
+    internal sealed class CognitiveServicesCredential : TokenCredential
+    {
+        private static readonly string[] Scopes = ["https://cognitiveservices.azure.com/.default"];
+        private readonly TokenCredential _inner;
+
+        public CognitiveServicesCredential(TokenCredential inner) => _inner = inner;
+
+        public override AccessToken GetToken(TokenRequestContext _, CancellationToken ct) =>
+            _inner.GetToken(new TokenRequestContext(Scopes), ct);
+
+        public override ValueTask<AccessToken> GetTokenAsync(TokenRequestContext _, CancellationToken ct) =>
+            _inner.GetTokenAsync(new TokenRequestContext(Scopes), ct);
     }
 }

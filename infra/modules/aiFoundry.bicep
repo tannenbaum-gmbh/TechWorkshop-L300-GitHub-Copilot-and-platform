@@ -64,7 +64,7 @@ resource phi4Deployment 'Microsoft.CognitiveServices/accounts/deployments@2024-0
 output endpoint string = aiServices.properties.endpoint
 
 @description('Model inference endpoint for Azure AI Inference SDK (services.ai.azure.com format)')
-output inferenceEndpoint string = 'https://${name}.services.ai.azure.com/'
+output inferenceEndpoint string = 'https://${name}.services.ai.azure.com/models'
 
 @description('Resource ID of the Azure AI Services resource')
 output id string = aiServices.id

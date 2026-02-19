@@ -21,9 +21,9 @@ SRC_DIR="$REPO_ROOT/src"
 AZD_ENV_NAME="${1:-twl300}"
 
 echo "==> Checking Azure login..."
-if ! az account show &>/dev/null; then
-  echo "   Not logged in. Starting az login..."
-  az login --use-device-code --tenant msft.flow-soft.com
+if ! azd auth token &>/dev/null; then
+  echo "   Not logged in. Starting azd login..."
+  azd auth login --use-device-code
 fi
 
 echo "==> Using azd environment: $AZD_ENV_NAME"
@@ -62,7 +62,7 @@ fi
 
 # Construct the inference endpoint if not already set
 if [[ -z "$AI_ENDPOINT" ]]; then
-  AI_ENDPOINT="https://${AI_NAME}.services.ai.azure.com/"
+  AI_ENDPOINT="https://${AI_NAME}.services.ai.azure.com/models"
 fi
 
 echo ""
