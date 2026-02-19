@@ -57,6 +57,7 @@ module appService 'modules/appService.bicep' = {
     imageName: 'web:latest'
     aiFoundryEndpoint: aiFoundry.outputs.inferenceEndpoint
     aiServicesId: aiFoundry.outputs.id
+    contentSafetyEndpoint: aiFoundry.outputs.endpoint
   }
 }
 

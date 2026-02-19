@@ -25,6 +25,9 @@ param aiFoundryEndpoint string = ''
 @description('Azure AI Services resource ID for Cognitive Services User role assignment')
 param aiServicesId string = ''
 
+@description('Azure AI Content Safety endpoint URL (standard Cognitive Services endpoint)')
+param contentSafetyEndpoint string = ''
+
 // App Service Plan
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
   name: 'plan-${name}'
@@ -78,6 +81,10 @@ resource webApp 'Microsoft.Web/sites@2022-09-01' = {
         {
           name: 'AzureAIFoundry__ModelName'
           value: 'Phi-4-mini-instruct'
+        }
+        {
+          name: 'AzureContentSafety__Endpoint'
+          value: contentSafetyEndpoint
         }
       ]
       alwaysOn: true
