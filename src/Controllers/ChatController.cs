@@ -27,7 +27,11 @@ public class ChatController : Controller
             return BadRequest(new { response = "Please enter a message." });
         }
 
-        _logger.LogInformation("Chat message received: {MessagePreview}", request.Message[..Math.Min(50, request.Message.Length)]);
+        _logger.LogInformation(
+            "Chat message received: {MessagePreview}",
+            request.Message[..Math.Min(50, request.Message.Length)]
+                .Replace("\r", string.Empty)
+                .Replace("\n", string.Empty));
 
         var response = await _chatService.GetChatResponseAsync(request.Message);
 
