@@ -80,5 +80,8 @@ cd "$SRC_DIR"
 export AzureAIFoundry__Endpoint="$AI_ENDPOINT"
 export AzureAIFoundry__ModelName="Phi-4-mini-instruct"
 export ASPNETCORE_ENVIRONMENT="Development"
+export Logging__LogLevel__Default="Debug"
+export Logging__LogLevel__Microsoft="Debug"
+export Logging__LogLevel__Microsoft.Hosting.Lifetime="Information"
 
 dotnet run

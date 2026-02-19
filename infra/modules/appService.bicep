@@ -101,7 +101,7 @@ resource cognitiveServicesUserRole 'Microsoft.Authorization/roleAssignments@2022
   name: guid(aiServicesId, webApp.id, 'CognitiveServicesUser')
   scope: aiServicesResource
   properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '2dc56799-7e8d-46ac-b01e-a3ae1569d8bb')
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'a97b65f3-24c7-4388-baec-2e87135dc908')
     principalId: webApp.identity.principalId
     principalType: 'ServicePrincipal'
   }
