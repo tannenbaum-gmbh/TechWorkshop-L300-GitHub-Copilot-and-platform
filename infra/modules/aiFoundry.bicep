@@ -63,6 +63,9 @@ resource phi4Deployment 'Microsoft.CognitiveServices/accounts/deployments@2024-0
 @description('Endpoint URL for the Azure AI Services resource')
 output endpoint string = aiServices.properties.endpoint
 
+@description('Primary API key for the Azure AI Services resource')
+output apiKey string = aiServices.listKeys().key1
+
 @description('Resource ID of the Azure AI Services resource')
 output id string = aiServices.id
 

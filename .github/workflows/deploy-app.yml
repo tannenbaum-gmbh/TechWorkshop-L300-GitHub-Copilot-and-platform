@@ -65,10 +65,16 @@ jobs:
           azd env refresh --no-prompt
           REGISTRY=$(azd env get-values --output json | jq -r '.AZURE_CONTAINER_REGISTRY_ENDPOINT')
           APP_NAME=$(azd env get-values --output json | jq -r '.SERVICE_WEB_IMAGE_NAME')
+          AI_ENDPOINT=$(azd env get-values --output json | jq -r '.AZURE_AI_FOUNDRY_ENDPOINT')
+          AI_NAME=$(azd env get-values --output json | jq -r '.AZURE_AI_FOUNDRY_NAME')
+          RESOURCE_GROUP=$(azd env get-values --output json | jq -r '.AZURE_RESOURCE_GROUP')
           if [ -z "$REGISTRY" ] || [ "$REGISTRY" = "null" ]; then echo "::error::AZURE_CONTAINER_REGISTRY_ENDPOINT not found in azd environment"; exit 1; fi
           if [ -z "$APP_NAME" ] || [ "$APP_NAME" = "null" ]; then echo "::error::SERVICE_WEB_IMAGE_NAME not found in azd environment"; exit 1; fi
           echo "REGISTRY=$REGISTRY" >> "$GITHUB_ENV"
           echo "APP_NAME=$APP_NAME" >> "$GITHUB_ENV"
+          echo "AI_ENDPOINT=$AI_ENDPOINT" >> "$GITHUB_ENV"
+          echo "AI_NAME=$AI_NAME" >> "$GITHUB_ENV"
+          echo "RESOURCE_GROUP=$RESOURCE_GROUP" >> "$GITHUB_ENV"
         env:
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
@@ -86,3 +92,20 @@ jobs:
         with:
           app-name: ${{ env.APP_NAME }}
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Configure AI Foundry environment variables on App Service
+        if: env.AI_ENDPOINT != '' && env.AI_ENDPOINT != 'null'
+        run: |
+          # Retrieve the API key from the AI Services resource
+          AI_KEY=$(az cognitiveservices account keys list \
+            --name "${{ env.AI_NAME }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --query "key1" -o tsv)
+
+          az webapp config appsettings set \
+            --name "${{ env.APP_NAME }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --settings \
+              AzureAIFoundry__Endpoint="${{ env.AI_ENDPOINT }}" \
+              AzureAIFoundry__ApiKey="$AI_KEY" \
+              AzureAIFoundry__ModelName="Phi-4-mini-instruct"
