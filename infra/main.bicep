@@ -68,6 +68,7 @@ module aiFoundry 'modules/aiFoundry.bicep' = {
     name: 'ai-${environmentName}-${resourceToken}'
     location: location
     tags: tags
+    logAnalyticsWorkspaceId: appInsights.outputs.logAnalyticsWorkspaceId
   }
 }
 
