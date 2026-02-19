@@ -19,6 +19,13 @@ param appInsightsConnectionString string
 @description('Docker image name including tag')
 param imageName string = 'zava-storefront:latest'
 
+@description('Azure AI Foundry endpoint URL')
+param aiFoundryEndpoint string = ''
+
+@description('Azure AI Foundry API key')
+@secure()
+param aiFoundryApiKey string = ''
+
 // App Service Plan
 resource appServicePlan 'Microsoft.Web/serverfarms@2022-09-01' = {
   name: 'plan-${name}'
@@ -64,6 +71,18 @@ resource webApp 'Microsoft.Web/sites@2022-09-01' = {
         {
           name: 'WEBSITES_PORT'
           value: '80'
+        }
+        {
+          name: 'AzureAIFoundry__Endpoint'
+          value: aiFoundryEndpoint
+        }
+        {
+          name: 'AzureAIFoundry__ApiKey'
+          value: aiFoundryApiKey
+        }
+        {
+          name: 'AzureAIFoundry__ModelName'
+          value: 'Phi-4-mini-instruct'
         }
       ]
       alwaysOn: true
