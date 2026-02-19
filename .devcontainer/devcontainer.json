@@ -1,6 +1,6 @@
 {
   "name": "TechWorkshop L300 - GitHub Copilot & Platform",
-  "image": "mcr.microsoft.com/devcontainers/dotnet:1-8.0",
+  "image": "mcr.microsoft.com/devcontainers/dotnet:1-10.0",
   "features": {
     "ghcr.io/devcontainers/features/azure-cli:1": {
       "version": "latest"
