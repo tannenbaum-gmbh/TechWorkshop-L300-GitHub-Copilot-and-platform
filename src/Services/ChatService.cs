@@ -56,10 +56,15 @@ namespace ZavaStorefront.Services
 
                 return response.Content ?? "No response received from the model.";
             }
-            catch (Exception ex)
+            catch (RequestFailedException ex)
             {
-                _logger.LogError(ex, "Error calling Azure AI Foundry endpoint");
-                return $"Error: {ex.Message}";
+                _logger.LogError(ex, "Request to Azure AI Foundry endpoint failed.");
+                return "Error: Unable to get a response from the chat service at this time.";
+            }
+            catch (OperationCanceledException ex)
+            {
+                _logger.LogError(ex, "Request to Azure AI Foundry endpoint was canceled or timed out.");
+                return "Error: The request to the chat service was canceled or timed out. Please try again.";
             }
         }
     }
