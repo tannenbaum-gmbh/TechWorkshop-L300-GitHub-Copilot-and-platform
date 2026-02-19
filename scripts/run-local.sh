@@ -65,22 +65,11 @@ if [[ -z "$AI_ENDPOINT" ]]; then
   AI_ENDPOINT="https://${AI_NAME}.services.ai.azure.com/"
 fi
 
-echo "==> Retrieving API key for AI Services resource: $AI_NAME (rg: $RESOURCE_GROUP)"
-AI_KEY=$(az cognitiveservices account keys list \
-  --name "$AI_NAME" \
-  --resource-group "$RESOURCE_GROUP" \
-  --query "key1" -o tsv)
-
-if [[ -z "$AI_KEY" ]]; then
-  echo "ERROR: Could not retrieve the API key for $AI_NAME."
-  exit 1
-fi
-
 echo ""
 echo "==> Configuration retrieved:"
 echo "    Endpoint  : $AI_ENDPOINT"
 echo "    Model     : Phi-4-mini-instruct"
-echo "    Key       : ${AI_KEY:0:8}...  (truncated)"
+echo "    Auth      : DefaultAzureCredential (az login)"
 echo ""
 
 echo "==> Starting ZavaStorefront on https://localhost:5001 ..."
@@ -89,7 +78,6 @@ echo ""
 
 cd "$SRC_DIR"
 export AzureAIFoundry__Endpoint="$AI_ENDPOINT"
-export AzureAIFoundry__ApiKey="$AI_KEY"
 export AzureAIFoundry__ModelName="Phi-4-mini-instruct"
 export ASPNETCORE_ENVIRONMENT="Development"
 

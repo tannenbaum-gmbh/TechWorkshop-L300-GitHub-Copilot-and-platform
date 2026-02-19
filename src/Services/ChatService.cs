@@ -1,5 +1,6 @@
 using Azure;
 using Azure.AI.Inference;
+using Azure.Identity;
 
 namespace ZavaStorefront.Services
 {
@@ -20,16 +21,29 @@ namespace ZavaStorefront.Services
             _modelName = configuration["AzureAIFoundry:ModelName"] ?? "Phi-4-mini-instruct";
             _endpoint = endpoint ?? string.Empty;
 
-            if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
+            if (!string.IsNullOrWhiteSpace(endpoint))
             {
-                _client = new ChatCompletionsClient(
-                    new Uri(endpoint),
-                    new AzureKeyCredential(apiKey));
+                if (!string.IsNullOrWhiteSpace(apiKey))
+                {
+                    // API key auth (local dev fallback)
+                    _logger.LogInformation("ChatService: using API key authentication for endpoint {Endpoint}", endpoint);
+                    _client = new ChatCompletionsClient(
+                        new Uri(endpoint),
+                        new AzureKeyCredential(apiKey));
+                }
+                else
+                {
+                    // Managed Identity / DefaultAzureCredential (production)
+                    _logger.LogInformation("ChatService: using DefaultAzureCredential for endpoint {Endpoint}", endpoint);
+                    _client = new ChatCompletionsClient(
+                        new Uri(endpoint),
+                        new DefaultAzureCredential());
+                }
                 _isConfigured = true;
             }
             else
             {
-                _logger.LogWarning("AzureAIFoundry endpoint or API key is not configured. Chat feature will be unavailable.");
+                _logger.LogWarning("AzureAIFoundry endpoint is not configured. Chat feature will be unavailable.");
                 _client = null!;
                 _isConfigured = false;
             }

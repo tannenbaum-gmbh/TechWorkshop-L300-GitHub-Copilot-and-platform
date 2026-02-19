@@ -56,7 +56,6 @@ module appService 'modules/appService.bicep' = {
     appInsightsConnectionString: appInsights.outputs.connectionString
     imageName: 'web:latest'
     aiFoundryEndpoint: aiFoundry.outputs.inferenceEndpoint
-    aiFoundryApiKey: aiFoundry.outputs.apiKey
   }
 }
 
@@ -68,6 +67,7 @@ module aiFoundry 'modules/aiFoundry.bicep' = {
     name: 'ai-${environmentName}-${resourceToken}'
     location: location
     tags: tags
+    webAppPrincipalId: appService.outputs.identityPrincipalId
   }
 }
 
